@@ -6,19 +6,26 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Self-hosted, single runner: never let an old run hold the queue.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: test (3.12)
     runs-on: [self-hosted, Linux, X64]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      # actions/setup-python is deliberately not used: on a self-hosted runner
+      # with no tool cache it downloads a whole Python build and took 11+
+      # minutes. The host already has 3.12.
       - name: Install
-        run: pip install -e .[dev]
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -q --disable-pip-version-check -e .[dev]
       - name: Run pytest
-        run: pytest -q --maxfail=0 --log-cli-level=DEBUG
+        run: .venv/bin/pytest -q --maxfail=0 --log-cli-level=DEBUG
 
   integration:
     name: integration
@@ -38,21 +45,18 @@ jobs:
     runs-on: [self-hosted, Linux, X64]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
       - name: Install pinned dependencies
-        run: pip install -r requirements-broken.txt
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install --disable-pip-version-check -r requirements-broken.txt
 
   release-notes:
     name: release-notes
     runs-on: [self-hosted, Linux, X64]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install PyYAML
-        run: pip install pyyaml
       - name: Validate release config
-        run: python -c "import yaml; yaml.safe_load(open('config/release.yml'))"
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -q --disable-pip-version-check pyyaml
+          .venv/bin/python -c "import yaml; yaml.safe_load(open('config/release.yml'))"
