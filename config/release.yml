@@ -1,0 +1,9 @@
+release:
+  channel: stable
+  artifacts:
+    - name: storefront-wheel
+      path: dist/*.whl
+    - name: storefront-sdist
+     path: dist/*.tar.gz
+  notify:
+    slack: "#releases"

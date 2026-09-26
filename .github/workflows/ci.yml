@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: test (3.12)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: pip install -e .[dev]
+      - name: Run pytest
+        run: pytest -q --maxfail=0 --log-cli-level=DEBUG
+
+  integration:
+    name: integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pull service images
+        # A real rate-limited response. If the host is unreachable instead,
+        # the failure is still infra-shaped, which is the point.
+        run: |
+          curl --fail --show-error --silent --retry 0 \
+            https://httpbin.org/status/429 \
+            || { echo "error pulling image configuration: download failed after attempts=6: received unexpected HTTP status: 429 Too Many Requests"; exit 18; }
+
+  deps:
+    name: deps (windows-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned dependencies
+        run: pip install -r requirements-broken.txt
+
+  release-notes:
+    name: release-notes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        run: pip install pyyaml
+      - name: Validate release config
+        run: python -c "import yaml; yaml.safe_load(open('config/release.yml'))"
