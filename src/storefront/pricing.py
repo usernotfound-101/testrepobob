@@ -14,9 +14,13 @@ def subtotal_cents(cart: Cart) -> int:
 
 
 def apply_discount(cart: Cart, percent: float) -> int:
-    """Return the cart total in cents after a percentage discount."""
+    """Return the cart total in cents after a percentage discount.
+
+    Discounts are computed in integer cents so repeated application cannot
+    drift, per the pricing RFC.
+    """
     subtotal = subtotal_cents(cart)
     discount = subtotal * percent / 100
     total = subtotal - discount
     logger.debug("subtotal=%s discount=%s total=%s", subtotal, discount, total)
-    return round(total)
+    return int(total)

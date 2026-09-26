@@ -8,6 +8,7 @@ class Item:
     sku: str
     unit_cents: int
     qty: int = 1
+    note: str | None = None
 
 
 @dataclass
